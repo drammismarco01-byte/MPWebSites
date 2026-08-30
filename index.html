@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Extreme 3D Tic-Tac-Toe (27 Cells) - PC & Mobile</title>
+    <style>
+        :root {
+            /* Mobile dimensions (Default) */
+            --cube-size: 42px;
+            --gap: 58px; 
+            --primary: #00ffcc;
+            --bg: #0b0c10;
+            --surface: #1f2833;
+            --surface-card: #16213e;
+            --x-color: #ff0055;
+            --o-color: #00ffcc;
+            --wa-color: #25D366;
+            --text-muted: #8892b0;
+        }
+
+        /* Desktop Optimization (Screens > 850px) */
+        @media (min-width: 851px) {
+            :root {
+                --cube-size: 60px;
+                --gap: 85px;
+            }
+            
+            .main-wrapper {
+                flex-direction: row !important;
+                gap: 50px !important;
+            }
+
+            .desktop-hints {
+                display: flex !important;
+            }
+            
+            .slider-y { width: 400px !important; }
+            .slider-x { width: 400px !important; }
+            .slider-x-wrapper { height: 400px !important; }
+            .scene { width: 420px !important; height: 420px !important; }
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: clamp(1.4rem, 4vw, 2.2rem);
+            color: #fff;
+            text-shadow: 0 0 12px var(--primary);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: clamp(0.8rem, 2.5vw, 0.95rem);
+            max-width: 600px;
+        }
+
+        /* --- LAYOUT WRAPPER --- */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .middle-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* --- SLIDERS --- */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--surface);
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .slider-y { width: 280px; height: 10px; }
+        
+        .slider-x-wrapper {
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+        }
+        
+        .slider-x {
+            width: 280px;
+            height: 10px;
+            transform: rotate(-90deg);
+        }
+
+        /* --- 3D SCENA --- */
+        .scene {
+            width: 290px;
+            height: 290px;
+            perspective: 1000px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none; /* Prevents scrolling on touch screens when dragging */
+        }
+        
+        .scene:active { cursor: grabbing; }
+
+        .board-3x3x3 {
+            position: relative;
+            width: 0; 
+            height: 0;
+            transform-style: preserve-3d;
+            transform: rotateX(-20deg) rotateY(30deg) scale(1);
+            transition: transform 0.05s ease-out;
+        }
+
+        .cell-cube {
+            position: absolute;
+            width: var(--cube-size);
+            height: var(--cube-size);
+            transform-style: preserve-3d;
+            cursor: pointer;
+            margin-left: calc(var(--cube-size) / -2);
+            margin-top: calc(var(--cube-size) / -2);
+        }
+
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(22, 33, 62, 0.35);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--cube-size) * 0.55);
+            font-weight: bold;
+            transition: background 0.2s, border 0.2s;
+            backface-visibility: visible;
+        }
+
+        .cell-cube:hover .face {
+            border-color: var(--primary);
+            background: rgba(0, 255, 204, 0.25);
+        }
+
+        .front  { transform: translateZ(calc(var(--cube-size)/2)); }
+        .back   { transform: rotateY(180deg) translateZ(calc(var(--cube-size)/2)); }
+        .right  { transform: rotateY(90deg) translateZ(calc(var(--cube-size)/2)); }
+        .left   { transform: rotateY(-90deg) translateZ(calc(var(--cube-size)/2)); }
+        .top    { transform: rotateX(90deg) translateZ(calc(var(--cube-size)/2)); }
+        .bottom { transform: rotateX(-90deg) translateZ(calc(var(--cube-size)/2)); }
+
+        /* Simboli Giocati */
+        .x-mark .face { 
+            color: var(--x-color); 
+            text-shadow: 0 0 8px var(--x-color); 
+            background: rgba(255, 0, 85, 0.2);
+            border-color: rgba(255, 0, 85, 0.6);
+        }
+        .o-mark .face { 
+            color: var(--o-color); 
+            text-shadow: 0 0 8px var(--o-color); 
+            background: rgba(0, 255, 204, 0.2);
+            border-color: rgba(0, 255, 204, 0.6);
+        }
+
+        /* --- DASHBOARD & SIDE PANEL --- */
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: var(--surface-card);
+            padding: 20px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            min-width: 280px;
+        }
+
+        .scoreboard {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            justify-content: space-around;
+            background: var(--surface);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .score { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            font-size: 0.85rem; 
+            color: var(--text-muted);
+        }
+        .score span { font-weight: bold; font-size: 1.3rem; margin-top: 2px; }
+        .score.win span { color: var(--o-color); } 
+        .score.lose span { color: var(--x-color); } 
+        .score.draw span { color: #ffaa00; }
+
+        .status-msg { 
+            font-size: 1.15rem; 
+            font-weight: bold; 
+            height: 28px; 
+            text-align: center;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px 15px; 
+            font-size: 0.95rem; 
+            background: transparent;
+            color: var(--primary); 
+            border: 2px solid var(--primary);
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: all 0.2s ease;
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px;
+        }
+        
+        button:hover { 
+            background: var(--primary); 
+            color: var(--bg); 
+            box-shadow: 0 0 15px var(--primary); 
+        }
+
+        .btn-whatsapp {
+            color: var(--wa-color);
+            border-color: var(--wa-color);
+        }
+
+        .btn-whatsapp:hover {
+            background: var(--wa-color);
+            color: white;
+            box-shadow: 0 0 15px var(--wa-color);
+        }
+
+        .wa-icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Suggerimenti tastiera (visibili solo su PC) */
+        .desktop-hints {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px dashed rgba(255,255,255,0.1);
+            width: 100%;
+        }
+
+        .hint-item {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .key {
+            background: var(--surface);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #fff;
+            border: 1px solid #444;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Extreme 3D Tic-Tac-Toe</h1>
+        <p class="subtitle">3x3x3 Cube (27 Cells). Rotate using mouse drag, touch gestures, or keyboard arrows.</p>
+    </header>
+
+    <div class="main-wrapper">
+        <div class="game-container">
+            <div class="middle-section">
+                <div class="slider-x-wrapper">
+                    <input type="range" id="sliderX" class="slider-x" min="-180" max="180" value="-20">
+                </div>
+
+                <div class="scene" id="scene">
+                    <div class="board-3x3x3" id="board">
+                        </div>
+                </div>
+            </div>
+            
+            <input type="range" id="sliderY" class="slider-y" min="-180" max="180" value="30">
+        </div>
+
+        <div class="dashboard">
+            <div class="status-msg" id="statusMsg">Your turn (X)</div>
+            
+            <div class="scoreboard">
+                <div class="score win">Wins<span id="scoreWin">0</span></div>
+                <div class="score draw">Draws<span id="scoreDraw">0</span></div>
+                <div class="score lose">Losses<span id="scoreLose">0</span></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="resetGame()">Play Again</button>
+                <button class="btn-whatsapp" onclick="shareOnWhatsApp()">
+                    <svg class="wa-icon" viewBox="0 0 16 16">
+                      <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.005-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+                    </svg>
+                    Share
+                </button>
+            </div>
+
+            <div class="desktop-hints">
+                <div class="hint-item"><span>Rotate Cube:</span> <div><span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> or <span class="key">WASD</span></div></div>
+                <div class="hint-item"><span>Zoom In/Out:</span> <span class="key">Mouse Wheel</span></div>
+                <div class="hint-item"><span>Reset Game:</span> <span class="key">R</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. BOARD GENERATION 3X3X3 ---
+        const boardEl = document.getElementById('board');
+        let cellCubes = [];
+
+        const facesHTML = `
+            <div class="face front"></div>
+            <div class="face back"></div>
+            <div class="face right"></div>
+            <div class="face left"></div>
+            <div class="face top"></div>
+            <div class="face bottom"></div>
+        `;
+
+        function getGap() {
+            return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap'));
+        }
+
+        function createBoard() {
+            boardEl.innerHTML = '';
+            cellCubes = [];
+            const gap = getGap();
+            let index = 0;
+
+            for (let z = -1; z <= 1; z++) {
+                for (let y = -1; y <= 1; y++) {
+                    for (let x = -1; x <= 1; x++) {
+                        const cube = document.createElement('div');
+                        cube.className = 'cell-cube';
+                        cube.dataset.index = index;
+                        cube.innerHTML = facesHTML;
+                        
+                        let tX = x * gap;
+                        let tY = y * gap;
+                        let tZ = z * gap;
+                        cube.style.transform = `translate3D(${tX}px, ${tY}px, ${tZ}px)`;
+                        
+                        boardEl.appendChild(cube);
+                        cellCubes.push(cube);
+                        index++;
+                    }
+                }
+            }
+            attachCellEvents();
+        }
+
+        // Re-calculate positions on window resize for responsive layout switching
+        window.addEventListener('resize', () => {
+            const gap = getGap();
+            let index = 0;
+            for (let z = -1; z <= 1; z++) {
+                for (let y = -1; y <= 1; y++) {
+                    for (let x = -1; x <= 1; x++) {
+                        let tX = x * gap;
+                        let tY = y * gap;
+                        let tZ = z * gap;
+                        if(cellCubes[index]) {
+                            cellCubes[index].style.transform = `translate3D(${tX}px, ${tY}px, ${tZ}px)`;
+                        }
+                        index++;
+                    }
+                }
+            }
+        });
+
+        // --- 2. ROTATION & ZOOM CONTROLS (MOUSE, TOUCH, KEYBOARD, WHEEL) ---
+        const scene = document.getElementById('scene');
+        const sliderX = document.getElementById('sliderX');
+        const sliderY = document.getElementById('sliderY');
+        
+        let rotX = -20, rotY = 30, zoomScale = 1;
+        let isDragging = false, startMouseX = 0, startMouseY = 0;
+        let isClick = true;
+
+        function updateRotationUI() {
+            boardEl.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${zoomScale})`;
+            sliderX.value = rotX;
+            sliderY.value = rotY;
+        }
+
+        sliderX.addEventListener('input', (e) => { rotX = parseFloat(e.target.value); updateRotationUI(); });
+        sliderY.addEventListener('input', (e) => { rotY = parseFloat(e.target.value); updateRotationUI(); });
+
+        // Mouse Drag
+        scene.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            isClick = true;
+            startMouseX = e.clientX;
+            startMouseY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                isClick = false; 
+                let deltaX = e.clientX - startMouseX;
+                let deltaY = e.clientY - startMouseY;
+                rotY = (parseFloat(rotY) + deltaX * 0.5) % 360;
+                rotX = (parseFloat(rotX) - deltaY * 0.5) % 360;
+                startMouseX = e.clientX;
+                startMouseY = e.clientY;
+                updateRotationUI();
+            }
+        });
+
+        document.addEventListener('mouseup', () => { isDragging = false; });
+
+        // Touch Drag (Optimized for Mobile)
+        scene.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                isClick = true;
+                startMouseX = e.touches[0].clientX;
+                startMouseY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        scene.addEventListener('touchmove', (e) => {
+            if (isDragging && e.touches.length === 1) {
+                isClick = false;
+                let deltaX = e.touches[0].clientX - startMouseX;
+                let deltaY = e.touches[0].clientY - startMouseY;
+                rotY = (parseFloat(rotY) + deltaX * 0.6) % 360;
+                rotX = (parseFloat(rotX) - deltaY * 0.6) % 360;
+                startMouseX = e.touches[0].clientX;
+                startMouseY = e.touches[0].clientY;
+                updateRotationUI();
+            }
+        }, { passive: true });
+
+        scene.addEventListener('touchend', () => { isDragging = false; });
+
+        // PC Mouse Wheel Zoom
+        scene.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            zoomScale += e.deltaY * -0.001;
+            zoomScale = Math.min(Math.max(0.6, zoomScale), 1.8); // Clamp zoom range
+            updateRotationUI();
+        }, { passive: false });
+
+        // PC Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            const step = 8;
+            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') { rotX = (rotX + step) % 360; updateRotationUI(); }
+            else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') { rotX = (rotX - step) % 360; updateRotationUI(); }
+            else if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') { rotY = (rotY - step) % 360; updateRotationUI(); }
+            else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') { rotY = (rotY + step) % 360; updateRotationUI(); }
+            else if (e.key.toLowerCase() === 'r') { resetGame(); }
+        });
+
+        // --- 3. GAME LOGIC (27 CELLS) ---
+        let board = Array(27).fill('');
+        let gameActive = true;
+        const player = 'X';
+        const ai = 'O';
+        let scores = { win: 0, lose: 0, draw: 0 };
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Generate the 49 winning lines in 3D
+        const winCombos = [];
+        function getIdx(x, y, z) { return x + y*3 + z*9; }
+
+        for(let a=0; a<3; a++){
+            for(let b=0; b<3; b++){
+                winCombos.push([getIdx(0,a,b), getIdx(1,a,b), getIdx(2,a,b)]);
+                winCombos.push([getIdx(a,0,b), getIdx(a,1,b), getIdx(a,2,b)]);
+                winCombos.push([getIdx(a,b,0), getIdx(a,b,1), getIdx(a,b,2)]);
+            }
+        }
+        for(let a=0; a<3; a++){
+            winCombos.push([getIdx(0,0,a), getIdx(1,1,a), getIdx(2,2,a)]);
+            winCombos.push([getIdx(0,2,a), getIdx(1,1,a), getIdx(2,0,a)]);
+            winCombos.push([getIdx(0,a,0), getIdx(1,a,1), getIdx(2,a,2)]);
+            winCombos.push([getIdx(0,a,2), getIdx(1,a,1), getIdx(2,a,0)]);
+            winCombos.push([getIdx(a,0,0), getIdx(a,1,1), getIdx(a,2,2)]);
+            winCombos.push([getIdx(a,0,2), getIdx(a,1,1), getIdx(a,2,0)]);
+        }
+        winCombos.push([getIdx(0,0,0), getIdx(1,1,1), getIdx(2,2,2)]);
+        winCombos.push([getIdx(2,0,0), getIdx(1,1,1), getIdx(0,2,2)]);
+        winCombos.push([getIdx(0,2,0), getIdx(1,1,1), getIdx(2,0,2)]);
+        winCombos.push([getIdx(0,0,2), getIdx(1,1,1), getIdx(2,2,0)]);
+
+        function attachCellEvents() {
+            cellCubes.forEach(cube => {
+                cube.addEventListener('click', () => {
+                    const idx = cube.dataset.index;
+                    if (isClick && gameActive && board[idx] === '') {
+                        makeMove(idx, player);
+                        if (gameActive) {
+                            statusMsg.innerText = "PC analyzing 3D space...";
+                            setTimeout(aiMove, 120);
+                        }
+                    }
+                });
+            });
+        }
+
+        function makeMove(idx, symbol) {
+            board[idx] = symbol;
+            const cube = cellCubes[idx];
+            cube.classList.add(symbol === 'X' ? 'x-mark' : 'o-mark');
+            
+            const faces = cube.querySelectorAll('.face');
+            faces.forEach(face => face.innerText = symbol);
+            
+            let result = checkWinState(board);
+            if (result) endGame(result);
+        }
+
+        function checkWinState(b) {
+            for (let i = 0; i < winCombos.length; i++) {
+                const [x, y, z] = winCombos[i];
+                if (b[x] && b[x] === b[y] && b[x] === b[z]) return b[x];
+            }
+            if (!b.includes('')) return 'tie';
+            return null;
+        }
+
+        // --- 4. ARTIFICIAL INTELLIGENCE (HEURISTIC) ---
+        function aiMove() {
+            let move = getBestMove();
+            if(move !== -1) {
+                makeMove(move, ai);
+                if (gameActive) statusMsg.innerText = "Your turn (X)";
+            }
+        }
+
+        function getBestMove() {
+            let winMove = findWinningMoveFor(ai);
+            if (winMove !== -1) return winMove;
+
+            let blockMove = findWinningMoveFor(player);
+            if (blockMove !== -1) return blockMove;
+
+            let bestScore = -Infinity;
+            let bestMoves = [];
+
+            for (let i = 0; i < 27; i++) {
+                if (board[i] === '') {
+                    let score = evaluateCell(i);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMoves = [i];
+                    } else if (score === bestScore) {
+                        bestMoves.push(i);
+                    }
+                }
+            }
+            return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+        }
+
+        function findWinningMoveFor(symbol) {
+            for (let combo of winCombos) {
+                let symCount = 0;
+                let emptyCount = 0;
+                let emptyIdx = -1;
+
+                for (let idx of combo) {
+                    if (board[idx] === symbol) symCount++;
+                    else if (board[idx] === '') { emptyCount++; emptyIdx = idx; }
+                }
+
+                if (symCount === 2 && emptyCount === 1) return emptyIdx;
+            }
+            return -1;
+        }
+
+        function evaluateCell(idx) {
+            let score = 0;
+            if (idx === 13) score += 20; // Center cube priority
+            
+            for (let combo of winCombos) {
+                if (combo.includes(idx)) {
+                    let aiCount = 0;
+                    let playerCount = 0;
+                    for (let c of combo) {
+                        if (board[c] === ai) aiCount++;
+                        if (board[c] === player) playerCount++;
+                    }
+                    if (playerCount === 0) {
+                        if (aiCount === 1) score += 5;
+                        score += 1;
+                    }
+                    if (aiCount === 0 && playerCount === 1) score += 2;
+                }
+            }
+            return score;
+        }
+
+        // --- 5. END GAME & RESET ---
+        function endGame(result) {
+            gameActive = false;
+            if (result === player) {
+                statusMsg.innerText = "You Won!";
+                statusMsg.style.color = "var(--o-color)";
+                scores.win++;
+                document.getElementById('scoreWin').innerText = scores.win;
+            } else if (result === ai) {
+                statusMsg.innerText = "PC Wins!";
+                statusMsg.style.color = "var(--x-color)";
+                scores.lose++;
+                document.getElementById('scoreLose').innerText = scores.lose;
+            } else {
+                statusMsg.innerText = "It's a Draw!";
+                statusMsg.style.color = "#ffaa00";
+                scores.draw++;
+                document.getElementById('scoreDraw').innerText = scores.draw;
+            }
+        }
+
+        function resetGame() {
+            board = Array(27).fill('');
+            gameActive = true;
+            statusMsg.innerText = "Your turn (X)";
+            statusMsg.style.color = "white";
+            
+            cellCubes.forEach(cube => {
+                cube.classList.remove('x-mark', 'o-mark');
+                const faces = cube.querySelectorAll('.face');
+                faces.forEach(face => face.innerText = '');
+            });
+
+            rotX = -20;
+            rotY = 30;
+            zoomScale = 1;
+            updateRotationUI();
+        }
+
+        // --- 6. WHATSAPP SHARE ---
+        function shareOnWhatsApp() {
+            const website = "www.drammis.net";
+            const textToShare = `I'm playing 3D Tic-Tac-Toe (27 cells) against the AI!\n\nMy Score:\n🏆 Wins: ${scores.win}\n🤝 Draws: ${scores.draw}\n💀 Losses: ${scores.lose}\n\nCan you beat my score? Play at ${website}`;
+            const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(textToShare)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // Initialize board
+        createBoard();
+    </script>
+</body>
+</html>
