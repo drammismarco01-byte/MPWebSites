@@ -39,6 +39,8 @@
             .slider-x { width: 400px !important; }
             .slider-x-wrapper { height: 400px !important; }
             .scene { width: 420px !important; height: 420px !important; }
+            
+            header { margin-top: 10px !important; }
         }
 
         * {
@@ -65,6 +67,7 @@
         header {
             text-align: center;
             margin-bottom: 10px;
+            margin-top: 50px; /* Spazio per il bottone Go Back su mobile */
         }
 
         h1 {
@@ -151,7 +154,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            touch-action: none; /* Prevents scrolling on touch screens when dragging */
+            touch-action: none; 
         }
         
         .scene:active { cursor: grabbing; }
@@ -266,7 +269,7 @@
             width: 100%;
         }
 
-        button {
+        button, .btn-action {
             flex: 1;
             padding: 10px 15px; 
             font-size: 0.95rem; 
@@ -283,7 +286,7 @@
             gap: 8px;
         }
         
-        button:hover { 
+        button:hover, .btn-action:hover { 
             background: var(--primary); 
             color: var(--bg); 
             box-shadow: 0 0 15px var(--primary); 
@@ -300,13 +303,9 @@
             box-shadow: 0 0 15px var(--wa-color);
         }
 
-        .wa-icon {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
+        .wa-icon { width: 18px; height: 18px; fill: currentColor; }
 
-        /* Suggerimenti tastiera (visibili solo su PC) */
+        /* Suggerimenti tastiera */
         .desktop-hints {
             display: none;
             flex-direction: column;
@@ -320,22 +319,98 @@
             width: 100%;
         }
 
-        .hint-item {
-            display: flex;
-            justify-content: space-between;
+        .hint-item { display: flex; justify-content: space-between; }
+        .key {
+            background: var(--surface); padding: 2px 6px;
+            border-radius: 4px; color: #fff;
+            border: 1px solid #444; font-family: monospace;
         }
 
-        .key {
-            background: var(--surface);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: #fff;
-            border: 1px solid #444;
-            font-family: monospace;
+        /* --- NUOVE CLASSI: PULSANTE "GO BACK" --- */
+        .btn-go-back {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: var(--surface-card);
+            color: var(--primary);
+            padding: 8px 15px;
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.85rem;
+            z-index: 1000;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
+
+        .btn-go-back:hover {
+            background: var(--primary);
+            color: var(--bg);
+            box-shadow: 0 0 12px var(--primary);
+        }
+
+        /* --- NUOVE CLASSI: OVERLAY INIZIALE --- */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 12, 16, 0.95);
+            display: flex;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .overlay-card {
+            background: var(--surface-card);
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+            text-align: center;
+            width: 90%; max-width: 400px;
+        }
+
+        .overlay-card h2 { color: #fff; margin-top: 0; text-shadow: 0 0 8px var(--primary); margin-bottom: 20px;}
+        
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem; font-weight: bold;}
+        .form-group input { 
+            width: 100%; padding: 12px; border-radius: 8px; 
+            border: 1px solid rgba(0, 255, 204, 0.4); 
+            background: var(--surface); color: white; outline: none; 
+            font-size: 1rem;
+        }
+        .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(0,255,204,0.3);}
+        
+        .overlay-card button { width: 100%; padding: 12px; font-size: 1.1rem; }
     </style>
 </head>
 <body>
+
+    <!-- PULSANTE GO BACK -->
+    <a href="https://www.drammis.net" class="btn-go-back">
+        ⬅ Go back to map
+    </a>
+
+    <!-- OVERLAY SCHERMATA INIZIALE -->
+    <div class="overlay" id="startupOverlay">
+        <div class="overlay-card">
+            <h2>Welcome to Extreme 3D</h2>
+            <div class="form-group">
+                <label for="playerName">Your Name</label>
+                <input type="text" id="playerName" placeholder="Enter your name" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="playerCountry">Your Country</label>
+                <input type="text" id="playerCountry" placeholder="Enter your country" autocomplete="off">
+            </div>
+            <button id="startGameBtn">Start Game</button>
+        </div>
+    </div>
 
     <header>
         <h1>Extreme 3D Tic-Tac-Toe</h1>
@@ -351,7 +426,8 @@
 
                 <div class="scene" id="scene">
                     <div class="board-3x3x3" id="board">
-                        </div>
+                        <!-- Generato da JS -->
+                    </div>
                 </div>
             </div>
             
@@ -359,7 +435,7 @@
         </div>
 
         <div class="dashboard">
-            <div class="status-msg" id="statusMsg">Your turn (X)</div>
+            <div class="status-msg" id="statusMsg">Waiting to start...</div>
             
             <div class="scoreboard">
                 <div class="score win">Wins<span id="scoreWin">0</span></div>
@@ -386,6 +462,27 @@
     </div>
 
     <script>
+        // --- 0. GESTIONE GIOCATORE (NOME/PAESE) ---
+        let playerName = "Player";
+        let playerCountry = "Unknown";
+        
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            const nameInput = document.getElementById('playerName').value.trim();
+            const countryInput = document.getElementById('playerCountry').value.trim();
+            
+            if(nameInput) playerName = nameInput;
+            if(countryInput) playerCountry = countryInput;
+
+            // Nascondi l'overlay con animazione
+            const overlay = document.getElementById('startupOverlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; }, 500);
+
+            // Aggiorna lo stato di gioco iniziale
+            statusMsg.innerText = `${playerName}'s turn (X)`;
+        });
+
+
         // --- 1. BOARD GENERATION 3X3X3 ---
         const boardEl = document.getElementById('board');
         let cellCubes = [];
@@ -570,7 +667,8 @@
             cellCubes.forEach(cube => {
                 cube.addEventListener('click', () => {
                     const idx = cube.dataset.index;
-                    if (isClick && gameActive && board[idx] === '') {
+                    // L'utente può cliccare solo se l'overlay è nascosto (il messaggio non è Waiting to start)
+                    if (isClick && gameActive && board[idx] === '' && document.getElementById('startupOverlay').style.display === 'none') {
                         makeMove(idx, player);
                         if (gameActive) {
                             statusMsg.innerText = "PC analyzing 3D space...";
@@ -607,7 +705,7 @@
             let move = getBestMove();
             if(move !== -1) {
                 makeMove(move, ai);
-                if (gameActive) statusMsg.innerText = "Your turn (X)";
+                if (gameActive) statusMsg.innerText = `${playerName}'s turn (X)`;
             }
         }
 
@@ -677,7 +775,7 @@
         function endGame(result) {
             gameActive = false;
             if (result === player) {
-                statusMsg.innerText = "You Won!";
+                statusMsg.innerText = `${playerName} Won!`;
                 statusMsg.style.color = "var(--o-color)";
                 scores.win++;
                 document.getElementById('scoreWin').innerText = scores.win;
@@ -697,7 +795,7 @@
         function resetGame() {
             board = Array(27).fill('');
             gameActive = true;
-            statusMsg.innerText = "Your turn (X)";
+            statusMsg.innerText = `${playerName}'s turn (X)`;
             statusMsg.style.color = "white";
             
             cellCubes.forEach(cube => {
@@ -715,7 +813,7 @@
         // --- 6. WHATSAPP SHARE ---
         function shareOnWhatsApp() {
             const website = "www.drammis.net";
-            const textToShare = `I'm playing 3D Tic-Tac-Toe (27 cells) against the AI!\n\nMy Score:\n🏆 Wins: ${scores.win}\n🤝 Draws: ${scores.draw}\n💀 Losses: ${scores.lose}\n\nCan you beat my score? Play at ${website}`;
+            const textToShare = `I'm ${playerName} from ${playerCountry} and I'm playing 3D Tic-Tac-Toe against the AI!\n\nMy Score:\n🏆 Wins: ${scores.win}\n🤝 Draws: ${scores.draw}\n💀 Losses: ${scores.lose}\n\nCan you beat my score? Play at ${website}`;
             const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(textToShare)}`;
             window.open(whatsappUrl, '_blank');
         }
